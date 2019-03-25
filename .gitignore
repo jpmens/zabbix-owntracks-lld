@@ -1,0 +1,3 @@
+*.pyc
+*.dSYM
+.DS_Store
