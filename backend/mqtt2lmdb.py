@@ -18,9 +18,10 @@ __author__    = "Jan-Piet Mens <jp()mens.de>"
 __copyright__ = "Copyright 2019 Jan-Piet Mens"
 
 DB_PATH         = '../db'
-topic_branch    = "owntracks/zabb/+"
-# topic_branch    = "owntracks/zabb/maronea"
+topic_branch    = "owntracks/zbx/+"
+topic_branch    = "owntracks/zbx/012549656802107"
 TTL = 3600
+TTL = 300
 USE_SPARSE_FILES = sys.platform != 'darwin'
 
 def open_env():

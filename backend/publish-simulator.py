@@ -4,6 +4,7 @@ import paho.mqtt.publish as mqtt  # pip install --upgrade paho-mqtt
 import json
 from collections import namedtuple
 import time
+import random
 
 Loc = namedtuple('Loc', 'imei lat lon alt vel cog plate tid')
 
@@ -24,26 +25,35 @@ params = {
 }
 
 for p in positions:
-    topic = "owntracks/zabb/%s" % (p.imei)
+    topic = "owntracks/zbx/%s" % (p.imei)
+    # adjust random time: five minutes ago plus a bit
+    tst = int(time.time()) - 300 + random.randint(0, 120)
     data = {
         "_type"     : "location",
-        "tst"       : int(time.time()),
+        "tst"       : tst,
         "lat"       : p.lat,
         "lon"       : p.lon,
         "cog"       : p.cog,
         "alt"       : p.alt,
         "vel"       : p.vel,
-        "plate"     : p.plate,
         "tid"       : p.tid,
+        "batt"      : random.randint(82, 100),
+        "name"     : p.plate,                   # OSM popup on last/
     }
     payload = json.dumps(data)
-    print(topic, payload)
-
     mqtt.single(topic, payload,
             auth=None,
             tls=None,
             **params)
 
+
+    topic = "owntracks/zbx/%s/card" % (p.imei)
+    mqtt.single(topic, json.dumps({
+            "_type" : "card",
+            "name"  : p.plate }),
+        auth=None,
+        tls=None,
+        **params)
 
 
 
