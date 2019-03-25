@@ -1,3 +1,4 @@
 *.pyc
 *.dSYM
 .DS_Store
+db/
