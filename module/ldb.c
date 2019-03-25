@@ -134,7 +134,7 @@ JsonNode *db_getnext(struct ldb *lm)
 				imei = j->string_;
 			if ((j = json_find_member(json, "vel")) != NULL)
 				speed = j->number_;
-			if ((j = json_find_member(json, "plate")) != NULL)
+			if ((j = json_find_member(json, "name")) != NULL)
 				plate = j->string_;
 			else plate = imei;
 
