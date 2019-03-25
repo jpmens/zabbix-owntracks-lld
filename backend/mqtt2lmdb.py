@@ -56,7 +56,6 @@ def cleaner(env):
     now = int(time.time())
 
     with env.begin(write=True) as txn:
-        # keys = list(txn.cursor().iternext(values=True))
         for key, val in txn.cursor():
             try:
                 data = json.loads(val)
@@ -67,7 +66,7 @@ def cleaner(env):
 
             tst = int(data["tst"])
             if tst + int(TTL) < now:
-                print("---> ", (now - tst + TTL), key.decode('utf-8'), val.decode('utf-8'))
+                print("---> DELETE ", (now - tst + TTL), key.decode('utf-8'), val.decode('utf-8'))
                 try:
                     txn.delete(key)
                 except:
@@ -75,7 +74,7 @@ def cleaner(env):
         env.sync(True)
 
 def on_log(mosq, userdata, level, string):
-    print(string, file=sys.stderr)
+    print(level, string, file=sys.stderr)
 
 def on_connect(mosq, userdata, flags, rc):
     print("Connected to MQTT: rc: {0}".format(rc))
@@ -101,11 +100,13 @@ def on_message(mosq, userdata, msg):
         if "tst" not in data:
             data["tst"] = int(time.time())
 
-        tst = data.get("tst")
-        print(key, tst)
-        val = json.dumps(data)
+        # we may be getting an older, retained message. If its tst is
+        # not fresh, don't store it.
 
-        store(lmdb_env, key, val)
+        if int(data["tst"]) + int(TTL) >= int(time.time()):
+            print("storing ", key)
+            store(lmdb_env, key, json.dumps(data))
+
         cleaner(lmdb_env)
 
 
