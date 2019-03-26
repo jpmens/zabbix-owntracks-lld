@@ -5,6 +5,8 @@ import json
 from collections import namedtuple
 import time
 import random
+import base64
+import os
 
 Loc = namedtuple('Loc', 'imei lat lon alt vel cog plate tid')
 
@@ -12,7 +14,7 @@ positions = [
     Loc("012549656802107", 59.373399,  17.946690, 101,  15, 280, "25-33-XQ", "xq"),
     Loc("507957223448860", 32.851537, -80.012624,  90, 119, 110, "72-93-FQ", "fq"),
     Loc("523674523738680", 41.474304,  15.397448,  14,   0, 110, "JL-19-74", "JL"),
-    Loc("867260028922633", 40.878464,  -5.562181, 341,  56, 135, "42-22-GN", "Gn"),
+    Loc("867260028922633", 40.878464,  -5.562181, 341,  56, 135, "A 0815 BL", "Gn"),
     Loc("516081298750081", 48.856826,   2.292713,  43,  72, 205, "20-ER-20", "JJ"),
 ]
 
@@ -47,10 +49,20 @@ for p in positions:
             **params)
 
 
+
     topic = "owntracks/zbx/%s/card" % (p.imei)
-    mqtt.single(topic, json.dumps({
+    card = {
             "_type" : "card",
-            "name"  : p.plate }),
+            "name"  : p.plate,
+    }
+    for ext in [ "png", "jpg" ]:
+        image_file = "faces/{0}.{1}".format(p.imei, ext)
+        if os.path.exists(image_file):
+            img = base64.b64encode(open(image_file, "rb").read()).decode("utf-8")
+            card["face"] = img
+            break
+
+    mqtt.single(topic, json.dumps(card),
         auth=None,
         tls=None,
         **params)
