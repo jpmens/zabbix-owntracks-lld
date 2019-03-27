@@ -14,7 +14,9 @@ struct ldb {
 };
 
 struct ldb *db_open(char *path, char *name, int rdonly);
+void db_begin(struct ldb *lm);
 void db_close(struct ldb *);
 JsonNode *db_getnext(struct ldb *);
+JsonNode *db_get(struct ldb *, char *key);
 
 #endif

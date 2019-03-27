@@ -83,19 +83,23 @@ struct ldb *db_open(char *path, char *dbname, int rdonly)
 		return (NULL);
 	}
 
+	return (lm);
+}
+
+void db_begin(struct ldb *lm)
+{
+	int rc;
+
 	rc = mdb_txn_begin(lm->env, NULL, MDB_RDONLY, &lm->txn);
 	if (rc) {
-		fprintf(stderr, "db_enum: mdb_txn_begin: (%d) %s", rc, mdb_strerror(rc));
-		db_close(lm);
-		return (NULL);
+		fprintf(stderr, "db_begin: mdb_txn_begin: (%d) %s", rc, mdb_strerror(rc));
+		return;
 	}
 
 	rc = mdb_cursor_open(lm->txn, lm->dbi, &lm->cursor);
 
 	lm->key.mv_size = 0;
 	lm->key.mv_data = NULL;
-
-	return (lm);
 }
 
 void db_close(struct ldb *lm)
@@ -117,7 +121,6 @@ JsonNode *db_getnext(struct ldb *lm)
 	if ((rc = mdb_cursor_get(lm->cursor, &lm->key, &data, MDB_NEXT)) == 0) {
 		char buf[MAXBUF + 1], *plate = "UN-KNOWN", *imei = "0000000";
 		size_t buflen;
-		long speed = 0L;
 
 		if ((buflen = data.mv_size) > MAXBUF)
 			goto out;
@@ -132,8 +135,6 @@ JsonNode *db_getnext(struct ldb *lm)
 		if ((json = json_decode(buf)) != NULL) {
 			if ((j = json_find_member(json, "imei")) != NULL)
 				imei = j->string_;
-			if ((j = json_find_member(json, "vel")) != NULL)
-				speed = j->number_;
 			if ((j = json_find_member(json, "name")) != NULL)
 				plate = j->string_;
 			else plate = imei;
@@ -141,7 +142,6 @@ JsonNode *db_getnext(struct ldb *lm)
 			o = json_mkobject();
 			json_append_member(o, "{#OT.IMEI}",	json_mkstring(imei));
 			json_append_member(o, "{#OT.PLATE}",	json_mkstring(plate));
-			json_append_member(o, "{#OT.VEL}",	json_mknumber(speed));
 
 			json_delete(json);
 
@@ -157,3 +157,44 @@ JsonNode *db_getnext(struct ldb *lm)
 }
 
 
+JsonNode *db_get(struct ldb *lm, char *k)
+{
+	MDB_val data;
+	int rc;
+	char buf[MAXBUF + 1];
+	long len = -1;
+	JsonNode *json = NULL;
+
+	if (lm == NULL)
+		return (NULL);
+
+	rc = mdb_txn_begin(lm->env, NULL, MDB_RDONLY, &lm->txn);
+	if (rc) {
+		fprintf(stderr, "lmcache_get: mdb_txn_begin: (%d) %s", rc, mdb_strerror(rc));
+		return (NULL);
+	}
+
+	lm->key.mv_data = k;
+	lm->key.mv_size = strlen(k);
+
+	rc = mdb_get(lm->txn, lm->dbi, &lm->key, &data);
+	if (rc != 0) {
+		if (rc != MDB_NOTFOUND) {
+			printf("get: %s\n", mdb_strerror(rc));
+		} else {
+			// printf(" [%s] not found\n", k);
+		}
+	} else {
+		len =  (data.mv_size <= MAXBUF) ? data.mv_size : MAXBUF;
+		memcpy(buf, data.mv_data, len);
+		buf[len] = 0;
+
+		if ((json = json_decode(buf)) == NULL) {
+			fprintf(stderr, "Cannot decode JSON!!\n");
+		}
+
+		// printf("%s\n", (char *)data.mv_data);
+	}
+	mdb_txn_commit(lm->txn);
+	return (json);
+}
