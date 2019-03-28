@@ -32,11 +32,6 @@ def open_env():
         map_async=True,
         writemap=USE_SPARSE_FILES)
 
-def show_all():
-    print("* SHOW")
-    for key, value in txn.cursor():
-        print(" ", key, value[0:-1])
-
 def store(env, key, val):
     with env.begin(write=True, buffers=False) as txn:
         try:
@@ -45,23 +40,13 @@ def store(env, key, val):
         except:
             raise
 
-def remove(delete_key):
-    with env.begin(write=True, buffers=False) as txn:
-        n = 1
-        for key, value in txn.cursor():
-            if key == delete_key:
-                print("   ", n, key, value)
-                n = n + 1
-                txn.delete(key)
-
 def cleaner(env):
     now = int(time.time())
 
     with env.begin(write=True) as txn:
         for key, val in txn.cursor():
             try:
-                # chop 0x00 from end of value
-                data = json.loads(val[0:-1])
+                data = json.loads(val[0:-1])    # chop 0x00 from end of value
             except:
                 print("Cannot decode ", val)
                 txn.delete(key)
@@ -80,11 +65,9 @@ def on_log(mosq, userdata, level, string):
     print(level, string, file=sys.stderr)
 
 def on_connect(mosq, userdata, flags, rc):
-    print("Connected to MQTT: rc: {0}".format(rc))
     mqttc.subscribe(topic_branch, 0)
 
 def on_message(mosq, userdata, msg):
-    # print("%s (qos=%s, r=%s) %s" % (msg.topic, str(msg.qos), msg.retain, str(msg.payload)))
     lmdb_env = userdata
 
     topic_parts = msg.topic.split("/")
@@ -96,12 +79,9 @@ def on_message(mosq, userdata, msg):
 
     if "_type" in data and data["_type"] == "location":
         key = topic_parts[2]
-        del(data["_type"])
+        del(data["_type"])              # no need to store
         data["imei"] = topic_parts[2]
-
-        # ensure tst in data
-        if "tst" not in data:
-            data["tst"] = int(time.time())
+        data["tst"]  = int(data.get("tst", time.time())) # ensure tst in data
 
         # we may be getting an older, retained message. If its tst is
         # not fresh, don't store it.
@@ -111,7 +91,6 @@ def on_message(mosq, userdata, msg):
             store(lmdb_env, key, json.dumps(data))
 
         cleaner(lmdb_env)
-
 
 lmdb_env = open_env()
 
