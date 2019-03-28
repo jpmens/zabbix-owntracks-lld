@@ -161,8 +161,6 @@ JsonNode *db_get(struct ldb *lm, char *k)
 {
 	MDB_val data;
 	int rc;
-	char buf[MAXBUF + 1];
-	long len = -1;
 	JsonNode *json = NULL;
 
 	if (lm == NULL)
@@ -185,15 +183,10 @@ JsonNode *db_get(struct ldb *lm, char *k)
 			// printf(" [%s] not found\n", k);
 		}
 	} else {
-		len =  (data.mv_size <= MAXBUF) ? data.mv_size : MAXBUF;
-		memcpy(buf, data.mv_data, len);
-		buf[len] = 0;
-
-		if ((json = json_decode(buf)) == NULL) {
+		/* values are strings and they're 0x00 terminated. I hope. */
+		if ((json = json_decode((char *)data.mv_data)) == NULL) {
 			fprintf(stderr, "Cannot decode JSON!!\n");
 		}
-
-		// printf("%s\n", (char *)data.mv_data);
 	}
 	mdb_txn_commit(lm->txn);
 	return (json);
