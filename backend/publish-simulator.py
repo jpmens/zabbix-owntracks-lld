@@ -33,6 +33,8 @@ for p in positions:
     tst = int(time.time())
     vel = p.vel
     # vel = 10
+    vel = random.randint(40,80)
+    print(p.imei, vel)
     data = {
         "_type"     : "location",
         "tst"       : tst,
