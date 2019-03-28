@@ -19,7 +19,7 @@ __copyright__ = "Copyright 2019 Jan-Piet Mens"
 
 DB_PATH         = '../db'
 topic_branch    = "owntracks/zbx/+"
-topic_branch    = "owntracks/zbx/012549656802107"
+# topic_branch    = "owntracks/zbx/012549656802107"
 TTL = 3600
 TTL = 300
 USE_SPARSE_FILES = sys.platform != 'darwin'
@@ -35,12 +35,13 @@ def open_env():
 def show_all():
     print("* SHOW")
     for key, value in txn.cursor():
-        print(" ", key, value)
+        print(" ", key, value[0:-1])
 
 def store(env, key, val):
     with env.begin(write=True, buffers=False) as txn:
         try:
-            txn.put(key.encode('utf8'), val.encode('utf8'))
+            # force one byte longer (0x00) for C strings
+            txn.put(key.encode('utf8'), bytes(val.encode('utf8') + b'\00'))
         except:
             raise
 
@@ -59,7 +60,8 @@ def cleaner(env):
     with env.begin(write=True) as txn:
         for key, val in txn.cursor():
             try:
-                data = json.loads(val)
+                # chop 0x00 from end of value
+                data = json.loads(val[0:-1])
             except:
                 print("Cannot decode ", val)
                 txn.delete(key)
