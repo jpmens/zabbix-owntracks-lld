@@ -1,1 +1,2 @@
-all images from openclipart.org
+clipart from openclipart.org
+B2 made with PIL
