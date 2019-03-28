@@ -1,2 +1,3 @@
 lmdb
 paho-mqtt
+zabbix-api # https://pypi.org/project/zabbix-api/
