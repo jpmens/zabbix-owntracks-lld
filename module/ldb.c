@@ -119,20 +119,10 @@ JsonNode *db_getnext(struct ldb *lm)
 
 
 	if ((rc = mdb_cursor_get(lm->cursor, &lm->key, &data, MDB_NEXT)) == 0) {
-		char buf[MAXBUF + 1], *plate = "UN-KNOWN", *imei = "0000000";
-		size_t buflen;
+		/* values are strings and they're 0x00 terminated. I hope. */
+		char *plate = "UN-KNOWN", *imei = "0000000";
 
-		if ((buflen = data.mv_size) > MAXBUF)
-			goto out;
-
-		// printf("%*.*s %*.*s\n",
-		// 	(int)key.mv_size, (int)key.mv_size, (char *)key.mv_data,
-		// 	(int)data.mv_size, (int)data.mv_size, (char *)data.mv_data);
-
-		memcpy(buf, (char *)data.mv_data, buflen);
-		buf[buflen] = 0;
-
-		if ((json = json_decode(buf)) != NULL) {
+		if ((json = json_decode((char *)data.mv_data)) != NULL) {
 			if ((j = json_find_member(json, "imei")) != NULL)
 				imei = j->string_;
 			if ((j = json_find_member(json, "name")) != NULL)
@@ -148,8 +138,6 @@ JsonNode *db_getnext(struct ldb *lm)
 			return (o);
 		}
 	}
-
-	out:
 
 	mdb_cursor_close(lm->cursor);
 	mdb_txn_commit(lm->txn);
